@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>バレー マッチアップ確認</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#0f172a;
+    --panel:#1e293b;
+    --panel-2:#26334a;
+    --line:#3a4a63;
+    --text:#f1f5f9;
+    --text-dim:#94a3b8;
+    --teamA:#38bdf8;
+    --teamA-dim:#0c4a6e;
+    --teamB:#fb923c;
+    --teamB-dim:#7c2d12;
+    --accent:#22c55e;
+    --danger:#ef4444;
+    --net:#e2e8f0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    min-height:100vh;
+    padding:16px;
+    padding-bottom:40px;
+  }
+  h1{
+    font-size:1.1rem;
+    text-align:center;
+    margin:4px 0 16px;
+    letter-spacing:.02em;
+  }
+  .screen{max-width:480px;margin:0 auto;}
+  [hidden]{display:none!important;}
+
+  /* ---- setup screen ---- */
+  .team-card{
+    background:var(--panel);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:14px;
+    border:1px solid var(--line);
+  }
+  .team-card.teamA{border-top:4px solid var(--teamA);}
+  .team-card.teamB{border-top:4px solid var(--teamB);}
+  .team-card label.team-name{
+    display:block;
+    font-size:.75rem;
+    color:var(--text-dim);
+    margin-bottom:4px;
+  }
+  .team-name-input{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--text);
+    font-size:1rem;
+    margin-bottom:12px;
+  }
+  .pos-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+  .pos-cell{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+  }
+  .pos-cell .pos-label{
+    font-size:.68rem;
+    color:var(--text-dim);
+  }
+  .pos-cell input{
+    width:100%;
+    text-align:center;
+    padding:10px 4px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--text);
+    font-size:1.1rem;
+    font-weight:600;
+  }
+  .pos-cell.serve input{border-color:var(--accent);}
+  .net-hint{
+    text-align:center;
+    font-size:.65rem;
+    color:var(--text-dim);
+    margin:6px 0;
+    letter-spacing:.15em;
+  }
+  .serve-choice{
+    background:var(--panel);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:16px;
+    border:1px solid var(--line);
+  }
+  .serve-choice .choice-title{font-size:.8rem;color:var(--text-dim);margin-bottom:8px;}
+  .radio-row{display:flex;gap:10px;}
+  .radio-row label{
+    flex:1;
+    text-align:center;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    cursor:pointer;
+    font-size:.9rem;
+  }
+  .radio-row input{display:none;}
+  .radio-row label.checked-a{border-color:var(--teamA);color:var(--teamA);}
+  .radio-row label.checked-b{border-color:var(--teamB);color:var(--teamB);}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .primary-btn{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:var(--accent);
+    color:#04210f;
+    font-size:1.05rem;
+    font-weight:700;
+  }
+  .error-msg{
+    color:var(--danger);
+    font-size:.8rem;
+    text-align:center;
+    min-height:1.2em;
+    margin-bottom:8px;
+  }
+
+  /* ---- match screen ---- */
+  .scoreboard{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:10px 14px;
+    margin-bottom:14px;
+  }
+  .score-side{
+    flex:1;
+    text-align:center;
+  }
+  .score-side .s-name{
+    font-size:.8rem;
+    color:var(--text-dim);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+  }
+  .score-side.a .s-name{color:var(--teamA);}
+  .score-side.b .s-name{color:var(--teamB);}
+  .score-side .s-score{
+    font-size:2rem;
+    font-weight:800;
+  }
+  .serve-dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 3px rgba(34,197,94,.25);
+  }
+  .score-mid{
+    padding:0 10px;
+    color:var(--text-dim);
+    font-size:.85rem;
+  }
+
+  .court{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+    margin-bottom:14px;
+  }
+  .court-team-label{
+    font-size:.72rem;
+    color:var(--text-dim);
+    text-align:center;
+    margin:2px 0;
+  }
+  .court-row{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin:4px 0;
+  }
+  .player{
+    aspect-ratio:1;
+    border-radius:50%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    font-size:1.15rem;
+    border:2px solid var(--line);
+    position:relative;
+  }
+  .player .p-pos{
+    position:absolute;
+    top:3px;
+    left:6px;
+    font-size:.55rem;
+    font-weight:600;
+    color:var(--text-dim);
+  }
+  .player.teamA{background:var(--teamA-dim);color:var(--teamA);border-color:var(--teamA);}
+  .player.teamB{background:var(--teamB-dim);color:var(--teamB);border-color:var(--teamB);}
+  .player.serving{box-shadow:0 0 0 3px var(--accent);}
+  .player.serving::after{
+    content:"🏐";
+    position:absolute;
+    bottom:-8px;
+    font-size:.8rem;
+  }
+  .front-row .player{border-width:3px;}
+  .net-line{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:8px 0;
+  }
+  .net-line .line{flex:1;height:3px;background:repeating-linear-gradient(90deg,var(--net) 0 8px,transparent 8px 14px);}
+  .net-line span{font-size:.65rem;color:var(--text-dim);letter-spacing:.2em;}
+
+  .matchup-list{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:12px 14px;
+    margin-bottom:14px;
+  }
+  .matchup-list h2{
+    font-size:.78rem;
+    color:var(--text-dim);
+    margin:0 0 8px;
+    font-weight:600;
+  }
+  .matchup-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:6px 0;
+    font-size:1rem;
+    border-bottom:1px solid var(--line);
+  }
+  .matchup-row:last-child{border-bottom:none;}
+  .matchup-row .num{
+    min-width:34px;
+    text-align:center;
+    font-weight:800;
+    padding:4px 0;
+    border-radius:8px;
+  }
+  .matchup-row .num.a{background:var(--teamA-dim);color:var(--teamA);}
+  .matchup-row .num.b{background:var(--teamB-dim);color:var(--teamB);}
+  .matchup-row .vs{color:var(--text-dim);font-size:.75rem;}
+  .matchup-row .pos-tag{font-size:.65rem;color:var(--text-dim);min-width:60px;}
+
+  .point-btns{
+    display:flex;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .point-btn{
+    flex:1;
+    padding:16px 8px;
+    border-radius:14px;
+    border:none;
+    font-size:1rem;
+    font-weight:700;
+  }
+  .point-btn.a{background:var(--teamA);color:#04202e;}
+  .point-btn.b{background:var(--teamB);color:#2e1000;}
+
+  .util-row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .util-btn{
+    flex:1;
+    min-width:90px;
+    padding:10px 6px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--text);
+    font-size:.8rem;
+  }
+  .util-btn:disabled{opacity:.4;}
+</style>
+</head>
+<body>
+<div class="screen">
+  <h1>🏐 バレーボール マッチアップ確認</h1>
+
+  <!-- ===== SETUP SCREEN ===== -->
+  <div id="setupScreen">
+    <div class="error-msg" id="setupError"></div>
+
+    <div class="team-card teamA">
+      <label class="team-name">チームA 名称</label>
+      <input type="text" id="nameA" class="team-name-input" placeholder="チームA" maxlength="12">
+      <div class="pos-grid">
+        <div class="pos-cell"><span class="pos-label">④</span><input type="text" inputmode="numeric" maxlength="3" data-team="A" data-pos="4"></div>
+        <div class="pos-cell"><span class="pos-label">③</span><input type="text" inputmode="numeric" maxlength="3" data-team="A" data-pos="3"></div>
+        <div class="pos-cell"><span class="pos-label">②</span><input type="text" inputmode="numeric" maxlength="3" data-team="A" data-pos="2"></div>
+      </div>
+      <div class="net-hint">▲ ネット側（前衛）</div>
+      <div class="pos-grid">
+        <div class="pos-cell"><span class="pos-label">⑤</span><input type="text" inputmode="numeric" maxlength="3" data-team="A" data-pos="5"></div>
+        <div class="pos-cell"><span class="pos-label">⑥</span><input type="text" inputmode="numeric" maxlength="3" data-team="A" data-pos="6"></div>
+        <div class="pos-cell serve"><span class="pos-label">①サーブ</span><input type="text" inputmode="numeric" maxlength="3" data-team="A" data-pos="1"></div>
+      </div>
+    </div>
+
+    <div class="team-card teamB">
+      <label class="team-name">チームB 名称</label>
+      <input type="text" id="nameB" class="team-name-input" placeholder="チームB" maxlength="12">
+      <div class="pos-grid">
+        <div class="pos-cell"><span class="pos-label">④</span><input type="text" inputmode="numeric" maxlength="3" data-team="B" data-pos="4"></div>
+        <div class="pos-cell"><span class="pos-label">③</span><input type="text" inputmode="numeric" maxlength="3" data-team="B" data-pos="3"></div>
+        <div class="pos-cell"><span class="pos-label">②</span><input type="text" inputmode="numeric" maxlength="3" data-team="B" data-pos="2"></div>
+      </div>
+      <div class="net-hint">▲ ネット側（前衛）</div>
+      <div class="pos-grid">
+        <div class="pos-cell"><span class="pos-label">⑤</span><input type="text" inputmode="numeric" maxlength="3" data-team="B" data-pos="5"></div>
+        <div class="pos-cell"><span class="pos-label">⑥</span><input type="text" inputmode="numeric" maxlength="3" data-team="B" data-pos="6"></div>
+        <div class="pos-cell serve"><span class="pos-label">①サーブ</span><input type="text" inputmode="numeric" maxlength="3" data-team="B" data-pos="1"></div>
+      </div>
+    </div>
+
+    <div class="serve-choice">
+      <div class="choice-title">最初のサーブ権</div>
+      <div class="radio-row">
+        <label id="labelServeA"><input type="radio" name="firstServe" value="A" checked>チームA</label>
+        <label id="labelServeB"><input type="radio" name="firstServe" value="B">チームB</label>
+      </div>
+    </div>
+
+    <button class="primary-btn" id="startBtn">試合開始</button>
+  </div>
+
+  <!-- ===== MATCH SCREEN ===== -->
+  <div id="matchScreen" hidden>
+    <div class="scoreboard">
+      <div class="score-side a">
+        <div class="s-name"><span id="dotA" class="serve-dot" hidden></span><span id="scNameA"></span></div>
+        <div class="s-score" id="scoreA">0</div>
+      </div>
+      <div class="score-mid">-</div>
+      <div class="score-side b">
+        <div class="s-name"><span id="scNameB"></span><span id="dotB" class="serve-dot" hidden></span></div>
+        <div class="s-score" id="scoreB">0</div>
+      </div>
+    </div>
+
+    <div class="court">
+      <div class="court-team-label" id="courtLabelB"></div>
+      <div class="court-row" id="rowBBack"></div>
+      <div class="court-row front-row" id="rowBFront"></div>
+      <div class="net-line"><div class="line"></div><span>NET</span><div class="line"></div></div>
+      <div class="court-row front-row" id="rowAFront"></div>
+      <div class="court-row" id="rowABack"></div>
+      <div class="court-team-label" id="courtLabelA"></div>
+    </div>
+
+    <div class="matchup-list">
+      <h2>前衛マッチアップ（ブロック対決）</h2>
+      <div id="frontMatchups"></div>
+    </div>
+    <div class="matchup-list">
+      <h2>後衛の対面</h2>
+      <div id="backMatchups"></div>
+    </div>
+
+    <div class="point-btns">
+      <button class="point-btn a" id="pointA"></button>
+      <button class="point-btn b" id="pointB"></button>
+    </div>
+
+    <div class="util-row">
+      <button class="util-btn" id="undoBtn" disabled>1つ戻す</button>
+      <button class="util-btn" id="rotateABtn">Aのみ手動回転</button>
+      <button class="util-btn" id="rotateBBtn">Bのみ手動回転</button>
+      <button class="util-btn" id="editBtn">スタメン編集</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "volleyballMatchupState_v1";
+  var ACROSS = {1:5,2:4,3:3,4:2,5:1,6:6};
+  var FRONT_POS = [2,3,4];
+  var BACK_POS = [1,5,6];
+
+  var state = null;
+
+  var setupScreen = document.getElementById("setupScreen");
+  var matchScreen = document.getElementById("matchScreen");
+  var setupError = document.getElementById("setupError");
+
+  function emptyLineup(){ return {1:"",2:"",3:"",4:"",5:"",6:""}; }
+
+  function rotateClockwise(lineup){
+    var prev = {1:6,2:1,3:2,4:3,5:4,6:5};
+    var out = {};
+    for (var pos = 1; pos <= 6; pos++){
+      out[pos] = lineup[prev[pos]];
+    }
+    return out;
+  }
+
+  function cloneState(s){
+    return JSON.parse(JSON.stringify(s));
+  }
+
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){ /* storage unavailable, ignore */ }
+  }
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    }catch(e){ /* ignore */ }
+    return null;
+  }
+
+  function clearStorage(){
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  }
+
+  // ---------- setup screen ----------
+
+  function readLineupFromInputs(team){
+    var lineup = emptyLineup();
+    var inputs = document.querySelectorAll('input[data-team="'+team+'"]');
+    inputs.forEach(function(inp){
+      lineup[inp.getAttribute("data-pos")] = inp.value.trim();
+    });
+    return lineup;
+  }
+
+  function fillInputsFromLineup(team, lineup){
+    var inputs = document.querySelectorAll('input[data-team="'+team+'"]');
+    inputs.forEach(function(inp){
+      inp.value = lineup[inp.getAttribute("data-pos")] || "";
+    });
+  }
+
+  function validateLineup(lineup, teamLabel){
+    var values = [];
+    for (var pos = 1; pos <= 6; pos++){
+      var v = lineup[pos];
+      if (!v){
+        return teamLabel + "の背番号を全て入力してください（ポジション" + pos + "が未入力）";
+      }
+      values.push(v);
+    }
+    var seen = {};
+    for (var i = 0; i < values.length; i++){
+      if (seen[values[i]]){
+        return teamLabel + "内で背番号「" + values[i] + "」が重複しています";
+      }
+      seen[values[i]] = true;
+    }
+    return null;
+  }
+
+  document.querySelectorAll('input[name="firstServe"]').forEach(function(radio){
+    radio.addEventListener("change", updateServeChoiceStyle);
+  });
+  function updateServeChoiceStyle(){
+    var val = document.querySelector('input[name="firstServe"]:checked').value;
+    document.getElementById("labelServeA").className = val === "A" ? "checked-a" : "";
+    document.getElementById("labelServeB").className = val === "B" ? "checked-b" : "";
+  }
+  updateServeChoiceStyle();
+
+  document.getElementById("startBtn").addEventListener("click", function(){
+    var nameA = document.getElementById("nameA").value.trim() || "チームA";
+    var nameB = document.getElementById("nameB").value.trim() || "チームB";
+    var lineupA = readLineupFromInputs("A");
+    var lineupB = readLineupFromInputs("B");
+
+    var err = validateLineup(lineupA, nameA) || validateLineup(lineupB, nameB);
+    if (err){
+      setupError.textContent = err;
+      return;
+    }
+    setupError.textContent = "";
+
+    var firstServe = document.querySelector('input[name="firstServe"]:checked').value;
+
+    state = {
+      nameA: nameA,
+      nameB: nameB,
+      lineupA: lineupA,
+      lineupB: lineupB,
+      serving: firstServe,
+      scoreA: 0,
+      scoreB: 0,
+      history: []
+    };
+    saveState();
+    showMatchScreen();
+  });
+
+  document.getElementById("editBtn").addEventListener("click", function(){
+    if (!confirm("スタメン編集画面に戻ります。現在の試合状況（得点・ローテーション）は失われます。よろしいですか？")) return;
+    clearStorage();
+    state = null;
+    matchScreen.hidden = true;
+    setupScreen.hidden = false;
+  });
+
+  // ---------- match screen ----------
+
+  function pushHistory(){
+    state.history.push({
+      lineupA: cloneState(state.lineupA),
+      lineupB: cloneState(state.lineupB),
+      serving: state.serving,
+      scoreA: state.scoreA,
+      scoreB: state.scoreB
+    });
+    if (state.history.length > 50) state.history.shift();
+  }
+
+  function pointFor(team){
+    pushHistory();
+    if (team === "A") state.scoreA++; else state.scoreB++;
+
+    if (state.serving !== team){
+      if (team === "A") state.lineupA = rotateClockwise(state.lineupA);
+      else state.lineupB = rotateClockwise(state.lineupB);
+      state.serving = team;
+    }
+    saveState();
+    renderMatch();
+  }
+
+  function manualRotate(team){
+    pushHistory();
+    if (team === "A") state.lineupA = rotateClockwise(state.lineupA);
+    else state.lineupB = rotateClockwise(state.lineupB);
+    saveState();
+    renderMatch();
+  }
+
+  function undo(){
+    if (!state.history.length) return;
+    var prev = state.history.pop();
+    state.lineupA = prev.lineupA;
+    state.lineupB = prev.lineupB;
+    state.serving = prev.serving;
+    state.scoreA = prev.scoreA;
+    state.scoreB = prev.scoreB;
+    saveState();
+    renderMatch();
+  }
+
+  document.getElementById("pointA").addEventListener("click", function(){ pointFor("A"); });
+  document.getElementById("pointB").addEventListener("click", function(){ pointFor("B"); });
+  document.getElementById("rotateABtn").addEventListener("click", function(){ manualRotate("A"); });
+  document.getElementById("rotateBBtn").addEventListener("click", function(){ manualRotate("B"); });
+  document.getElementById("undoBtn").addEventListener("click", undo);
+
+  function playerCell(team, pos){
+    var num = team === "A" ? state.lineupA[pos] : state.lineupB[pos];
+    var isServing = state.serving === team && pos === 1;
+    var div = document.createElement("div");
+    div.className = "player team" + team + (isServing ? " serving" : "");
+    div.innerHTML = '<span class="p-pos">' + pos + '</span>' + num;
+    return div;
+  }
+
+  function renderRow(containerId, team, positions){
+    var el = document.getElementById(containerId);
+    el.innerHTML = "";
+    positions.forEach(function(pos){
+      el.appendChild(playerCell(team, pos));
+    });
+  }
+
+  function renderMatchupGroup(containerId, positions){
+    var el = document.getElementById(containerId);
+    el.innerHTML = "";
+    positions.forEach(function(posA){
+      var posB = ACROSS[posA];
+      var row = document.createElement("div");
+      row.className = "matchup-row";
+      row.innerHTML =
+        '<span class="pos-tag">' + posA + ' - ' + posB + '</span>' +
+        '<span class="num a">' + state.lineupA[posA] + '</span>' +
+        '<span class="vs">VS</span>' +
+        '<span class="num b">' + state.lineupB[posB] + '</span>';
+      el.appendChild(row);
+    });
+  }
+
+  function renderMatch(){
+    document.getElementById("scNameA").textContent = state.nameA;
+    document.getElementById("scNameB").textContent = state.nameB;
+    document.getElementById("scoreA").textContent = state.scoreA;
+    document.getElementById("scoreB").textContent = state.scoreB;
+    document.getElementById("dotA").hidden = state.serving !== "A";
+    document.getElementById("dotB").hidden = state.serving !== "B";
+    document.getElementById("courtLabelA").textContent = state.nameA + "（自陣）";
+    document.getElementById("courtLabelB").textContent = state.nameB + "（相手陣）";
+    document.getElementById("pointA").textContent = state.nameA + " 得点";
+    document.getElementById("pointB").textContent = state.nameB + " 得点";
+
+    renderRow("rowBBack", "B", [1,6,5]);
+    renderRow("rowBFront", "B", [2,3,4]);
+    renderRow("rowAFront", "A", [4,3,2]);
+    renderRow("rowABack", "A", [5,6,1]);
+
+    renderMatchupGroup("frontMatchups", FRONT_POS);
+    renderMatchupGroup("backMatchups", BACK_POS);
+
+    document.getElementById("undoBtn").disabled = state.history.length === 0;
+  }
+
+  function showMatchScreen(){
+    setupScreen.hidden = true;
+    matchScreen.hidden = false;
+    renderMatch();
+  }
+
+  // ---------- boot ----------
+  var restored = loadState();
+  if (restored && restored.lineupA && restored.lineupB){
+    state = restored;
+    fillInputsFromLineup("A", state.lineupA);
+    fillInputsFromLineup("B", state.lineupB);
+    document.getElementById("nameA").value = state.nameA;
+    document.getElementById("nameB").value = state.nameB;
+    showMatchScreen();
+  }
+})();
+</script>
+</body>
+</html>
